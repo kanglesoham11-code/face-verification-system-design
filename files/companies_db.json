@@ -1,0 +1,30 @@
+{
+  "companies": [
+    {
+      "companyName": "SYNCUP TECHNOLOGIES PRIVATE LIMITED",
+      "businessRegistration": {
+        "number": "UDYAM-MH-26-0012345",
+        "type": "UDYAM",
+        "document": "mock_business_registration.pdf",
+        "description": "Udyam Registration Certificate from MSME Ministry"
+      },
+      "gstCertificate": {
+        "number": "27ABCDE1234F1Z5",
+        "type": "GSTIN",
+        "document": "mock_gst_certificate.pdf",
+        "description": "GST Registration Certificate Form REG-06"
+      },
+      "incorporationCertificate": {
+        "number": "U72900PN2026PTC123456",
+        "type": "CIN",
+        "document": "mock_certificate_of_incorporation.pdf",
+        "description": "Certificate of Incorporation from MCA"
+      },
+      "pan": "ABCDE1234F",
+      "address": "123, Tech Park, Hinjewadi, Pune, Maharashtra 411057",
+      "dateOfIncorporation": "2026-04-19",
+      "type": "Private Limited Company",
+      "registrar": "Registrar of Companies, Pune"
+    }
+  ]
+}

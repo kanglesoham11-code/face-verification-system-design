@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FaceID</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0d0d14;
+    color: #e8e8f0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; color: #4f8cff; }
+  .sub { font-size: 13px; color: #666; margin-bottom: 2rem; }
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 860px;
+  }
+  @media(max-width:620px){ .layout { grid-template-columns: 1fr; } }
+  .card {
+    background: #13131f;
+    border: 1px solid #222;
+    border-radius: 14px;
+    padding: 1.25rem;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #555;
+    margin-bottom: 1rem;
+  }
+  .cam-box {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #07070f;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #1a1a2e;
+  }
+  #vid {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+  }
+  .cam-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.7);
+    font-size: 14px;
+    color: #aaa;
+    text-align: center;
+    padding: 1rem;
+  }
+  .cam-status {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    white-space: nowrap;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #333;
+    color: #aaa;
+    display: none;
+  }
+  .cam-status.green { border-color: #00d97e; color: #00d97e; }
+  .cam-status.amber { border-color: #ffb830; color: #ffb830; }
+  .checks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 1rem 0;
+  }
+  .chk {
+    background: #0d0d1a;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 12px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+  }
+  .chk .icon { font-size: 16px; }
+  .chk.done { border-color: #00d97e; color: #00d97e; background: rgba(0,217,126,0.06); }
+  .api-bar {
+    width: 100%;
+    max-width: 860px;
+    margin-bottom: 1rem;
+    background: #13131f;
+    border: 1px solid #222;
+    border-radius: 10px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; flex-shrink: 0; }
+  .dot.green { background: #00d97e; box-shadow: 0 0 6px #00d97e; }
+  .dot.red { background: #ff4d6a; }
+  .dot.amber { background: #ffb830; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+  #api-txt { font-size: 12px; color: #666; flex: 1; min-width: 120px; }
+  #api-url { background: #0d0d1a; border: 1px solid #2a2a3a; border-radius: 6px; padding: 5px 10px; color: #ccc; font-size: 12px; width: 200px; outline: none; }
+  .btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #2a2a3a;
+    background: #0d0d1a;
+    color: #ccc;
+    font-size: 13px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  .btn:hover:not(:disabled) { border-color: #4f8cff; color: #4f8cff; }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn.primary { background: #4f8cff; border-color: #4f8cff; color: #fff; font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { background: #3a7aee; }
+  .btn.green { background: rgba(0,217,126,0.15); border-color: #00d97e; color: #00d97e; }
+  .btn.small { width: auto; padding: 5px 14px; font-size: 12px; margin-top: 0; }
+  .inp {
+    width: 100%;
+    background: #0d0d1a;
+    border: 1px solid #2a2a3a;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #e8e8f0;
+    font-size: 13px;
+    outline: none;
+    margin-bottom: 8px;
+  }
+  .inp:focus { border-color: #4f8cff; }
+  .result {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    display: none;
+    white-space: pre-line;
+  }
+  .result.ok   { background: rgba(0,217,126,0.1); border: 1px solid #00d97e; color: #00d97e; }
+  .result.fail { background: rgba(255,77,106,0.1); border: 1px solid #ff4d6a; color: #ff4d6a; }
+  .result.info { background: rgba(79,140,255,0.1); border: 1px solid #4f8cff; color: #4f8cff; }
+  .bar-wrap { height: 4px; background: #1a1a2e; border-radius: 2px; margin-top: 8px; display: none; }
+  .bar-fill  { height: 100%; border-radius: 2px; transition: width 0.5s; }
+  .faces-wrap { margin-top: 12px; display: none; }
+  .face-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    background: rgba(124,92,252,0.15);
+    border: 1px solid rgba(124,92,252,0.4);
+    color: #a88cfd;
+    cursor: pointer;
+    margin: 3px;
+  }
+  .face-tag:hover { background: rgba(255,77,106,0.15); border-color: #ff4d6a; color: #ff4d6a; }
+</style>
+</head>
+<body>
+
+<h1>FaceID</h1>
+<p class="sub">SFace · OpenCV · No external dependencies</p>
+
+<div class="api-bar">
+  <div class="dot" id="dot"></div>
+  <span id="api-txt">Not connected</span>
+  <input id="api-url" value="http://localhost:8000" />
+  <button class="btn small" onclick="connectAPI()">Connect</button>
+</div>
+
+<div class="layout">
+
+  <!-- Camera card -->
+  <div class="card" style="grid-row: span 2;">
+    <div class="card-title">📷 Live Camera</div>
+    <div class="cam-box">
+      <video id="vid" autoplay muted playsinline></video>
+      <div class="cam-overlay" id="cam-overlay">Click "Start Camera" to begin</div>
+      <div class="cam-status" id="cam-status"></div>
+    </div>
+
+    <div class="checks">
+      <div class="chk" id="chk-face"><span class="icon">👤</span> Face visible</div>
+      <div class="chk" id="chk-blink"><span class="icon">👁</span> Blink done</div>
+      <div class="chk" id="chk-head"><span class="icon">↔</span> Head turned</div>
+      <div class="chk" id="chk-live"><span class="icon">✅</span> Liveness OK</div>
+    </div>
+
+    <button class="btn primary" id="btn-cam" onclick="startCam()">Start Camera</button>
+    <button class="btn" id="btn-reset" onclick="resetAll()" disabled>Reset</button>
+  </div>
+
+  <!-- Store card -->
+  <div class="card">
+    <div class="card-title">💾 Store Face</div>
+    <input class="inp" id="person-name" placeholder="Enter your name..." />
+    <button class="btn green" id="btn-store" onclick="storeFace()" disabled>Store Face → Backend</button>
+    <div class="result" id="store-result"></div>
+    <div class="faces-wrap" id="faces-wrap">
+      <div class="card-title" style="margin-top:12px; margin-bottom:8px;">
+        Stored faces <span id="face-count" style="color:#4f8cff;"></span>
+      </div>
+      <div id="faces-list"></div>
+      <p style="font-size:11px;color:#444;margin-top:4px;">Tap name to delete</p>
+    </div>
+  </div>
+
+  <!-- Verify card -->
+  <div class="card">
+    <div class="card-title">🔍 Verify Face</div>
+    <label style="font-size:12px;color:#666;">
+      Threshold: <span id="thresh-lbl">36%</span>
+    </label>
+    <input type="range" min="20" max="80" value="36" id="thresh" style="width:100%;margin:8px 0;"
+      oninput="document.getElementById('thresh-lbl').textContent=this.value+'%'" />
+    <button class="btn primary" id="btn-verify" onclick="verifyFace()" disabled>Verify Against Backend</button>
+    <div class="result" id="verify-result"></div>
+    <div class="bar-wrap" id="bar-wrap">
+      <div class="bar-fill" id="bar-fill"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let API = 'http://localhost:8000';
+let stream = null;
+let livenessOK = false;
+let liveness = { face: false, blink: false, head: false };
+let detectInterval = null;
+let prevPixels = null;
+let brightHistory = [];
+let headHistory = [];
+let blinkCooldown = 0;
+
+const hCanvas = document.createElement('canvas');
+hCanvas.width = 160; hCanvas.height = 120;
+const hCtx = hCanvas.getContext('2d', { willReadFrequently: true });
+
+// ── API ──────────────────────────────────────────────────────────────────────
+async function connectAPI() {
+  API = document.getElementById('api-url').value.replace(/\/$/, '');
+  setDot('amber'); setTxt('Connecting...');
+  try {
+    const r = await fetch(API + '/');
+    const d = await r.json();
+    setDot('green');
+    setTxt('Connected · ' + d.model + ' · ' + d.stored_faces + ' face(s)');
+    loadFaces();
+  } catch(e) {
+    setDot('red');
+    setTxt('Cannot reach backend — is uvicorn running on port 8000?');
+  }
+}
+function setDot(c) { document.getElementById('dot').className = 'dot ' + c; }
+function setTxt(t)  { document.getElementById('api-txt').textContent = t; }
+
+// ── Camera ───────────────────────────────────────────────────────────────────
+async function startCam() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+    });
+    const vid = document.getElementById('vid');
+    vid.srcObject = stream;
+    await new Promise(r => { vid.onloadedmetadata = r; });
+    vid.play();
+    document.getElementById('cam-overlay').style.display = 'none';
+    document.getElementById('cam-status').style.display = 'block';
+    document.getElementById('btn-cam').disabled = true;
+    document.getElementById('btn-reset').disabled = false;
+    detectInterval = setInterval(runLiveness, 120);
+  } catch(e) {
+    alert('Camera error: ' + e.message + '\nPlease allow camera access in your browser.');
+  }
+}
+
+// ── Liveness (pure canvas pixel analysis — no external libs) ─────────────────
+function runLiveness() {
+  const vid = document.getElementById('vid');
+  if (!vid.readyState || vid.readyState < 2) return;
+
+  hCtx.drawImage(vid, 0, 0, 160, 120);
+  const frame = hCtx.getImageData(0, 0, 160, 120).data;
+
+  // Face presence — center region average brightness
+  let sum = 0, n = 0;
+  for (let y = 25; y < 95; y++) {
+    for (let x = 35; x < 125; x++) {
+      const i = (y * 160 + x) * 4;
+      sum += (frame[i] + frame[i+1] + frame[i+2]) / 3;
+      n++;
+    }
+  }
+  const bright = sum / n;
+  const faceOK = bright > 35 && bright < 235;
+  liveness.face = faceOK;
+  setChk('chk-face', faceOK);
+
+  if (!faceOK) {
+    setStatus('No face — center your face in the camera', 'amber');
+    return;
+  }
+
+  // Blink — eye strip brightness variance
+  let eyeSum = 0, eyeN = 0;
+  for (let y = 28; y < 52; y++) {
+    for (let x = 45; x < 115; x++) {
+      const i = (y * 160 + x) * 4;
+      eyeSum += (frame[i] + frame[i+1] + frame[i+2]) / 3;
+      eyeN++;
+    }
+  }
+  brightHistory.push(eyeSum / eyeN);
+  if (brightHistory.length > 25) brightHistory.shift();
+
+  if (!liveness.blink && brightHistory.length >= 12 && blinkCooldown <= 0) {
+    const base = brightHistory.slice(0, 10).reduce((a,b)=>a+b,0) / 10;
+    const curr = brightHistory.slice(-3).reduce((a,b)=>a+b,0) / 3;
+    if (Math.abs(base - curr) > 7) {
+      liveness.blink = true;
+      setChk('chk-blink', true);
+      blinkCooldown = 20;
+    }
+  }
+  if (blinkCooldown > 0) blinkCooldown--;
+
+  // Head turn — asymmetric motion between left and right halves
+  if (prevPixels) {
+    let L = 0, R = 0;
+    for (let y = 15; y < 105; y += 3) {
+      for (let x = 0; x < 80; x += 3) {
+        const i = (y * 160 + x) * 4;
+        L += Math.abs(frame[i] - prevPixels[i]);
+      }
+      for (let x = 80; x < 160; x += 3) {
+        const i = (y * 160 + x) * 4;
+        R += Math.abs(frame[i] - prevPixels[i]);
+      }
+    }
+    headHistory.push(L / (R + 1));
+    if (headHistory.length > 35) headHistory.shift();
+
+    if (!liveness.head && headHistory.length >= 25) {
+      const mn = Math.min(...headHistory);
+      const mx = Math.max(...headHistory);
+      if (mx / (mn + 0.01) > 3.0) {
+        liveness.head = true;
+        setChk('chk-head', true);
+      }
+    }
+  }
+  prevPixels = Array.from(frame);
+
+  livenessOK = liveness.face && liveness.blink && liveness.head;
+  setChk('chk-live', livenessOK);
+
+  if (livenessOK) {
+    setStatus('Liveness passed ✓', 'green');
+    document.getElementById('btn-store').disabled = false;
+    document.getElementById('btn-verify').disabled = false;
+  } else {
+    const todo = [];
+    if (!liveness.blink) todo.push('blink once');
+    if (!liveness.head)  todo.push('turn head left/right');
+    setStatus(todo.join('  ·  '), '');
+  }
+}
+
+function setStatus(t, cls) {
+  const el = document.getElementById('cam-status');
+  el.textContent = t;
+  el.className = 'cam-status ' + (cls || '');
+}
+function setChk(id, done) {
+  document.getElementById(id).classList.toggle('done', done);
+}
+
+// ── Capture ───────────────────────────────────────────────────────────────────
+function captureFrame() {
+  const vid = document.getElementById('vid');
+  const c = document.createElement('canvas');
+  c.width = vid.videoWidth || 640;
+  c.height = vid.videoHeight || 480;
+  const cx = c.getContext('2d');
+  cx.translate(c.width, 0);
+  cx.scale(-1, 1);
+  cx.drawImage(vid, 0, 0);
+  return new Promise(res => c.toBlob(res, 'image/jpeg', 0.92));
+}
+
+// ── Store ─────────────────────────────────────────────────────────────────────
+async function storeFace() {
+  const name = document.getElementById('person-name').value.trim();
+  if (!name) { showRes('store-result', 'Enter a name first', 'info'); return; }
+  if (!livenessOK) { showRes('store-result', 'Complete liveness first (blink + turn head)', 'info'); return; }
+  showRes('store-result', 'Sending to backend...', 'info');
+  try {
+    const fd = new FormData();
+    fd.append('file', await captureFrame(), 'face.jpg');
+    const r = await fetch(`${API}/store?name=${encodeURIComponent(name)}`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail);
+    showRes('store-result', `✓ Stored "${d.name}"\nEmbedding: ${d.embedding_dim}-dim\nTotal in DB: ${d.total_stored}`, 'ok');
+    loadFaces();
+  } catch(e) { showRes('store-result', '✗ ' + e.message, 'fail'); }
+}
+
+// ── Verify ────────────────────────────────────────────────────────────────────
+async function verifyFace() {
+  if (!livenessOK) { showRes('verify-result', 'Complete liveness first', 'info'); return; }
+  const thresh = parseFloat(document.getElementById('thresh').value) / 100;
+  showRes('verify-result', 'Verifying...', 'info');
+  document.getElementById('bar-wrap').style.display = 'none';
+  try {
+    const fd = new FormData();
+    fd.append('file', await captureFrame(), 'face.jpg');
+    const r = await fetch(`${API}/verify?threshold=${thresh}`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail);
+    const scores = Object.entries(d.all_scores).sort((a,b)=>b[1]-a[1]).map(([n,s])=>`${n}: ${s}%`).join('\n');
+    if (d.matched) {
+      showRes('verify-result', `✓ Matched: ${d.name}\nConfidence: ${d.confidence}%\n\n${scores}`, 'ok');
+    } else {
+      showRes('verify-result', `✗ No match\nBest score: ${d.confidence}% (need ≥${Math.round(thresh*100)}%)\n\n${scores}`, 'fail');
+    }
+    const bw = document.getElementById('bar-wrap');
+    bw.style.display = 'block';
+    const bf = document.getElementById('bar-fill');
+    bf.style.width = d.confidence + '%';
+    bf.style.background = d.matched ? 'linear-gradient(90deg,#4f8cff,#00d97e)' : 'linear-gradient(90deg,#4f8cff,#ff4d6a)';
+  } catch(e) { showRes('verify-result', '✗ ' + e.message, 'fail'); }
+}
+
+// ── Faces list ────────────────────────────────────────────────────────────────
+async function loadFaces() {
+  try {
+    const d = await (await fetch(`${API}/faces`)).json();
+    document.getElementById('face-count').textContent = `(${d.count})`;
+    const wrap = document.getElementById('faces-wrap');
+    const list = document.getElementById('faces-list');
+    if (d.count > 0) {
+      wrap.style.display = 'block';
+      list.innerHTML = d.faces.map(n =>
+        `<span class="face-tag" onclick="deleteFace('${n}')">${n}</span>`
+      ).join('');
+    } else { wrap.style.display = 'none'; }
+  } catch(e) {}
+}
+
+async function deleteFace(name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  await fetch(`${API}/faces/${encodeURIComponent(name)}`, { method:'DELETE' });
+  loadFaces();
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetAll() {
+  if (detectInterval) clearInterval(detectInterval);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null; livenessOK = false;
+  liveness = { face:false, blink:false, head:false };
+  prevPixels = null; brightHistory = []; headHistory = []; blinkCooldown = 0;
+  ['chk-face','chk-blink','chk-head','chk-live'].forEach(id => setChk(id, false));
+  document.getElementById('cam-overlay').style.display = 'flex';
+  document.getElementById('cam-status').style.display = 'none';
+  document.getElementById('btn-cam').disabled = false;
+  document.getElementById('btn-reset').disabled = true;
+  document.getElementById('btn-store').disabled = true;
+  document.getElementById('btn-verify').disabled = true;
+  document.getElementById('store-result').style.display = 'none';
+  document.getElementById('verify-result').style.display = 'none';
+  document.getElementById('bar-wrap').style.display = 'none';
+  document.getElementById('vid').srcObject = null;
+}
+
+function showRes(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text; el.className = 'result ' + type; el.style.display = 'block';
+}
+
+window.onload = () => connectAPI();
+</script>
+</body>
+</html>
